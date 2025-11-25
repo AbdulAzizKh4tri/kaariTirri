@@ -1,0 +1,56 @@
+// helpers.js
+function createRoomIfMissing(roomData, roomId) {
+    if (!roomData[roomId]) roomData[roomId] = { messages: [] };
+}
+
+function sendToRoom(io, roomData, roomId, msg) {
+    createRoomIfMissing(roomData, roomId);
+    roomData[roomId].messages.push(msg);
+    io.to(roomId).emit('message', msg);
+}
+
+function syncGameState(io, roomId, gameState) {
+    if (!gameState) return;
+    const pub = gameState.public || {};
+    const pg = gameState.playerGameStates || {};
+    const map = gameState.socketMap || {};
+
+    // broadcast public state
+    io.to(roomId).emit('publicState', pub);
+
+    // private state to each player
+    for (const [playerName, playerState] of Object.entries(pg)) {
+        const socketId = map[playerName];
+        if (!socketId) continue;
+        const sock = io.sockets.sockets.get(socketId);
+        if (sock) sock.emit('gameStateUpdate', { public: pub, playerGameState: playerState });
+    }
+}
+
+function clearRoomIfEmpty(io, roomData, roomId) {
+    const room = io.sockets.adapter.rooms.get(roomId);
+    if (!room || room.size === 0) {
+        console.log(`Room ${roomId} is empty → clearing room data`);
+        delete roomData[roomId];
+    }
+}
+
+function removeCard(hand, suit, number) {
+    const idx = hand.findIndex(
+        card => card.suit === suit && card.number === number
+    );
+
+    if (idx !== -1) {
+        hand.splice(idx, 1);   // removes the card
+        return true;           // removed successfully
+    }
+    return false;              // card not found
+}
+
+module.exports = {
+    createRoomIfMissing,
+    sendToRoom,
+    syncGameState,
+    clearRoomIfEmpty,
+    removeCard
+};
