@@ -127,7 +127,7 @@ io.on('connection', (socket) => {
         const result = game.selectPowerSuit(gs, socket.name,selectedSuit);
         result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
 
-        io.to(roomId).emit('powerSuitSelected', result.data)
+        io.to(nameToSocket[socket.name]).emit('powerSuitSelected', result.data)
         helpers.syncGameState(io, roomId, gs);
     });
 
@@ -143,10 +143,10 @@ io.on('connection', (socket) => {
         result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
 
         io.to(roomId).emit('newRound')
-        io.to(nameToSocket[socket.name]).emit('playerTurn');
-
         io.to(roomId).emit('message',`${socket.name}'s turn!`)
         helpers.syncGameState(io, roomId, gs);
+
+        io.to(nameToSocket[socket.name]).emit('playerTurn');
     });
 
     socket.on('cardPlayed', (card)=>{
@@ -165,12 +165,14 @@ io.on('connection', (socket) => {
             io.to(roomId).emit('newRound')
         }
 
+        helpers.syncGameState(io, roomId, gs);
         if(gs.public.gameWinners){
             io.to(roomId).emit('gameOver')
         }else{   
             io.to(roomId).emit('message',`${gs.public.players[gs.public.turnIndex]}'s turn!`)
+            io.to(nameToSocket[gs.public.players[gs.public.turnIndex]]).emit('playerTurn', gs.public.round[0]?.card?.suit);
         }
-        helpers.syncGameState(io, roomId, gs);
+
 
     })
 

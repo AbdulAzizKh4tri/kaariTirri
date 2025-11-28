@@ -237,7 +237,7 @@ function selectPowerSuit(gameState, playerName, selectedSuit){
         messages,
         data:{
             partnerCount,
-            defaultDeck
+            defaultDeck,
         }
     }
 }
@@ -282,6 +282,16 @@ function playCard(gameState, playerName, card){
     messages = []
     if(pub.players[pub.turnIndex] != playerName) return {messages}
     
+    if(pub.round.length > 0){
+        const leadSuit = pub.round[0].card.suit
+        if(card.suit != leadSuit){
+            const hasLeadSuit = gameState.playerGameStates[playerName].hand.some(c => c.suit == leadSuit)
+            if(hasLeadSuit){
+                messages.push(`${playerName} must follow suit ${leadSuit}`)
+                return {messages}
+            }
+        }
+    }
     
     const success = helpers.removeCard(gameState.playerGameStates[playerName].hand, card.suit, card.number)
     

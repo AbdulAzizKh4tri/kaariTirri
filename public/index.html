@@ -193,6 +193,7 @@
     })
 
     socket.on('gameStateUpdate', (data) => {
+        localStorage.gameState = JSON.stringify(data)
         gameState = data
         const hand = gameState.playerGameState.hand;
         playerHandDiv.innerHTML = ''
@@ -219,12 +220,15 @@
             div.classList.add('btn-group')
             grouped[suit].forEach(card => {
                 const btn = document.createElement('button');
-                btn.classList.add('btn','btn-primary')
+                btn.classList.add('btn','btn-primary',`${suit.toLowerCase()}`, 'hand_card_btn');
+                btn.disabled = true;
+                
 
                 btn.innerHTML = `${card.number} of ${card.suit}`;
 
                 btn.addEventListener('click',()=>{
                     socket.emit('cardPlayed', card);
+                    document.querySelectorAll('.hand_card_btn').forEach(b => b.disabled = true);
                 })
                 div.appendChild(btn)
             })
@@ -251,7 +255,6 @@
     })
 
     socket.on('powerSuitSelected', (data)=>{
-        const partnerCount = data.partnerCount;
         const deck = data.defaultDeck
         powerSuitPanel.hidden = true;
         
@@ -262,20 +265,33 @@
             partnerSelect.appendChild(option)
         });
         
-        partnerSelectionPanel.hidden = false
+        partnerSelectionPanel.hidden = false;
 
     })
 
     socket.on('newRound', ()=>{
         roundOutput.innerHTML = ""
+        partnerSelectionPanel.hidden = true;
     })
 
-    socket.on('playerTurn', ()=>{
+    socket.on('playerTurn', (leadSuit)=>{
+        const hasLeadSuit = JSON.parse(localStorage.gameState).playerGameState.hand.some(c => c.suit == leadSuit)
+        if(leadSuit && hasLeadSuit){
+            const buttons = document.getElementsByClassName(leadSuit.toLowerCase());
+            for (let button of buttons) {
+                button.disabled = false;
+            }
+        }else{
+            const buttons = document.getElementsByClassName('hand_card_btn');
+            for (let button of buttons) {
+                button.disabled = false;
+            }
+        }
 
     })
 
     socket.on('cardPlayed', (data)=>{
-        roundOutput.innerHTML += `${data.playerName} played ${data.card.number} of ${data.card.suit}`
+        roundOutput.innerHTML += `${data.playerName} played ${data.card.number} of ${data.card.suit}<br>`
     })
 
     socket.on('gameOver', ()=>{
