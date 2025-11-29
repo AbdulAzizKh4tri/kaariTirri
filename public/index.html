@@ -165,7 +165,7 @@
 
     bidBtn.addEventListener('click', () => {
         const bidAmount = parseInt(bidAmountInput.value);
-        if (isNaN(bidAmount) || bidAmount < 125) return;
+        if (isNaN(bidAmount) || bidAmount < 0) return;
         socket.emit('bidPlaced', bidAmount);
         bidAmountInput.value = '';
     });
@@ -219,18 +219,19 @@
             const div = document.createElement('div');
             div.classList.add('btn-group')
             grouped[suit].forEach(card => {
-                const btn = document.createElement('button');
-                btn.classList.add('btn','btn-primary',`${suit.toLowerCase()}`, 'hand_card_btn');
-                btn.disabled = true;
-                
+                const card_img = document.createElement('img');
+                card_img.classList.add(`${suit.toLowerCase()}`, 'hand_card');
+                card_img.src = `/cards/${card.suit.toLowerCase()}/${card.number.toLowerCase()}.png`;
+                card_img.style.pointerEvents = 'none';
+                card_img.style.width = '80px';
 
-                btn.innerHTML = `${card.number} of ${card.suit}`;
+                card_img.alt = `${card.number} of ${card.suit}`;
 
-                btn.addEventListener('click',()=>{
+                card_img.addEventListener('click',()=>{
                     socket.emit('cardPlayed', card);
-                    document.querySelectorAll('.hand_card_btn').forEach(b => b.disabled = true);
+                    document.querySelectorAll('.hand_card').forEach(c => {c.style.pointerEvents = 'none';});
                 })
-                div.appendChild(btn)
+                div.appendChild(card_img)
             })
             playerHandDiv.appendChild(div)
         }
@@ -277,25 +278,32 @@
     socket.on('playerTurn', (leadSuit)=>{
         const hasLeadSuit = JSON.parse(localStorage.gameState).playerGameState.hand.some(c => c.suit == leadSuit)
         if(leadSuit && hasLeadSuit){
-            const buttons = document.getElementsByClassName(leadSuit.toLowerCase());
-            for (let button of buttons) {
-                button.disabled = false;
+            const card_img = document.getElementsByClassName(leadSuit.toLowerCase());
+            for (let img of card_img) {
+                img.style.pointerEvents = 'auto';
             }
         }else{
-            const buttons = document.getElementsByClassName('hand_card_btn');
-            for (let button of buttons) {
-                button.disabled = false;
+            const card_img = document.getElementsByClassName('hand_card');
+            for (let img of card_img) {
+                img.style.pointerEvents = 'auto';
             }
         }
 
     })
 
     socket.on('cardPlayed', (data)=>{
-        roundOutput.innerHTML += `${data.playerName} played ${data.card.number} of ${data.card.suit}<br>`
+        const card_img = document.createElement('img');
+        card_img.src = `/cards/${data.card.suit.toLowerCase()}/${data.card.number.toLowerCase()}.png`;
+        card_img.style.width = '80px';
+        card_img.alt = `${data.card.number} of ${data.card.suit}`;
+        card_img.style.pointerEvents = 'none';
+
+        roundOutput.appendChild(card_img);
     })
 
     socket.on('gameOver', ()=>{
         socket.disconnect()
+        roundOutput.innerHTML += `<h2 class="text-center">Game Over! Winners: ${gameState.public.gameWinners}</h2>`
         console.log("BYE BYE")
     })
 
@@ -305,8 +313,7 @@
     });
 
     socket.on('disconnect', () => {
-        messagesDiv.innerHTML += `<p class="sys">Dis￼Start Game
-connected</p>`;
+        messagesDiv.innerHTML += `<p class="sys">Disconnected</p>`;
     });
 
 

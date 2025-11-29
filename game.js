@@ -271,7 +271,6 @@ function selectPartners(gameState, playerName, partners){
             }
         }
     })
-
     gameState.public.turnIndex = gameState.public.players.indexOf(playerName)
 
     return {messages}
@@ -328,11 +327,11 @@ function playCard(gameState, playerName, card){
 
             if(gameState.alphaScore >= pub.highestBid){
                 messages.push(`${[...gameState.alpha]} win!`)
-                pub.gameWinners = gameState.alpha
+                pub.gameWinners = [...gameState.alpha]
             }
             if(gameState.betaScore > 250 - pub.highestBid){
                 messages.push(`${[...gameState.beta]} win!`)
-                pub.gameWinners = gameState.beta
+                pub.gameWinners = [...gameState.beta]
             }
         }
 
