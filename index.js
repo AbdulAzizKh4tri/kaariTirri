@@ -13,7 +13,6 @@ const port = 3000;
 
 // In-memory room storage: { roomId: { messages: [], gameState: {...} } }
 const roomData = {};
-const nameToSocket = {};
 
 app.use(express.static(path.resolve('./public')));
 
@@ -25,10 +24,12 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         socket.roomId = roomId;
         socket.name = name;
-        nameToSocket[name] = socket.id;
-
+        
         // ensure room
         if (!roomData[roomId]) roomData[roomId] = { messages: [] };
+        
+        roomData[roomId].socketMap = roomData[roomId].socketMap || {};
+        roomData[roomId].socketMap[name] = socket.id;
 
         const gs = roomData[roomId].gameState;
 
@@ -37,6 +38,9 @@ io.on('connection', (socket) => {
             if (gs.playerGameStates && gs.playerGameStates[socket.name]) {
                 socket.emit('gameStateUpdate', { public: gs.public, playerGameState: gs.playerGameStates[socket.name] });
                 socket.emit('gameStarted');
+                if(socket.name == gs.public.players[gs.public.turnIndex]){
+                    socket.emit('playerTurn');
+                }
                 return;
             }
             // game in progress but player not part of it -> allow chat only
@@ -111,7 +115,7 @@ io.on('connection', (socket) => {
         }
 
         if(result.auctionWon){
-            io.to(nameToSocket[gs.public.highestBidder]).emit('auctionWinner');
+            io.to(roomData[roomId].socketMap[gs.public.highestBidder]).emit('auctionWinner');
             io.to(roomId).emit('auctionWon', gs.public.highestBidder)
         }
     });
@@ -127,7 +131,7 @@ io.on('connection', (socket) => {
         const result = game.selectPowerSuit(gs, socket.name,selectedSuit);
         result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
 
-        io.to(nameToSocket[socket.name]).emit('powerSuitSelected', result.data)
+        io.to(roomData[roomId].socketMap[socket.name]).emit('powerSuitSelected', result.data)
         helpers.syncGameState(io, roomId, gs);
     });
 
@@ -146,7 +150,7 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('message',`${socket.name}'s turn!`)
         helpers.syncGameState(io, roomId, gs);
 
-        io.to(nameToSocket[socket.name]).emit('playerTurn');
+        io.to(roomData[roomId].socketMap[socket.name]).emit('playerTurn');
     });
 
     socket.on('cardPlayed', (card)=>{
@@ -170,7 +174,7 @@ io.on('connection', (socket) => {
             io.to(roomId).emit('gameOver')
         }else{   
             io.to(roomId).emit('message',`${gs.public.players[gs.public.turnIndex]}'s turn!`)
-            io.to(nameToSocket[gs.public.players[gs.public.turnIndex]]).emit('playerTurn', gs.public.round[0]?.card?.suit);
+            io.to(roomData[roomId].socketMap[gs.public.players[gs.public.turnIndex]]).emit('playerTurn', gs.public.round[0]?.card?.suit);
         }
 
 

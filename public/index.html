@@ -33,9 +33,9 @@
         <div class="row">
             
             <!-- GAME AREA -->
-            <div class="col-lg-8 col-md-7 mb-4">
+            <div class="col-lg-9 col-md-8 mb-4">
                 <div class="card shadow-sm game-box p-4">
-                    <h3 class="fw-bold mb-3">Game Area</h3>
+                    <h3 class="fw-bold mb-3">Playing as: <span id="userNameDisplay"></span></h3>
                     
                     <button id="startGame" class="btn btn-success mb-3">Start Game</button>
                     
@@ -66,14 +66,14 @@
                         Waiting for game updates...
                     </div>
                     <h4>Round Score: <span id="roundScore">0</span>, Round Leader: <span id="roundLeader">...</span> </h4>
-                    <div id="playerHandDiv" class="border bg-white p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                    <div id="playerHandDiv" class="border bg-white p-3 rounded" style="max-height: 600px; overflow-y: auto;">
 
                     </div>
                 </div>
             </div>
 
             <!-- CHAT PANEL -->
-            <div class="col-lg-4 col-md-5">
+            <div class="col-lg-3 col-md-4">
 
                 <div class="card shadow-sm chat-panel">
                     <div class="card-header bg-primary text-white fw-bold">
@@ -106,6 +106,7 @@
     const roomInput = document.getElementById('roomId');
     const joinBtn = document.getElementById('joinBtn');
 
+    const userNameDisplay = document.getElementById('userNameDisplay');
     const startGameBtn = document.getElementById('startGame');
 
     const auctionPanel = document.getElementById('auctionPanel');
@@ -150,6 +151,7 @@
 
         joinSection.classList.add("d-none");
         gameWrapper.classList.remove("d-none");
+        userNameDisplay.textContent = name;
     });
 
     sendBtn.addEventListener('click', () => {
