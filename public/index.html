@@ -103,6 +103,8 @@
 
 <script>
     const socket = io({ autoConnect: false });
+    const ding = new Audio('sounds/discord_ding.mp3');
+    ding.volume = 0.2;
 
     const userNameInput = document.getElementById('userName');
     const roomInput = document.getElementById('roomId');
@@ -163,6 +165,11 @@
                 option.innerHTML = `${card.number} of ${card.suit}`
                 partnerSelect.appendChild(option)
             });
+        }else if(publicState.stage == "gameOver"){
+            auctionPanel.hidden = true;
+            powerSuitPanel.hidden = true;
+            partnerSelectionPanel.hidden = true;
+            startGameBtn.hidden = false;
         }else{
             auctionPanel.hidden = true;
             powerSuitPanel.hidden = true;
@@ -291,12 +298,17 @@
             roundOutput.appendChild(cardWrapper);
         });
 
-    
+        if(gameState.public.stage == "gameOver"){
+            roundOutput.innerHTML += `<h2 class="text-center">Game Over! Winners: ${gameState.public.gameWinners}</h2>`
+        }
+  
+  
     });
 
     socket.on('message', (msg) => {
         messagesDiv.innerHTML += `<p class="msg">${msg}</p>`;
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        ding.play();
     });
 
     socket.on('bulkMessage', (msgs)=>{
@@ -304,12 +316,7 @@
             messagesDiv.innerHTML += `<p class="msg">${msg}</p>`;
         });
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    })
-
-    socket.on('gameOver', ()=>{
-        socket.disconnect()
-        roundOutput.innerHTML += `<h2 class="text-center">Game Over! Winners: ${gameState.public.gameWinners}</h2>`
-        console.log("BYE BYE")
+        ding.play();
     })
 
     socket.on('connect', () => {

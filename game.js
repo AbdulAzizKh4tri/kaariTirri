@@ -325,10 +325,12 @@ function playCard(gameState, playerName, card){
             if(gameState.alphaScore >= pub.highestBid){
                 messages.push(`${[...gameState.alpha]} win!`)
                 pub.gameWinners = [...gameState.alpha]
+                pub.stage = 'gameOver'
             }
             if(gameState.betaScore > 250 - pub.highestBid){
                 messages.push(`${[...gameState.beta]} win!`)
                 pub.gameWinners = [...gameState.beta]
+                pub.stage = 'gameOver'
             }
         }
 

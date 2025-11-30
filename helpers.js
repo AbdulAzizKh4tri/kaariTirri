@@ -9,6 +9,12 @@ function sendToRoom(io, roomData, roomId, msg) {
     io.to(roomId).emit('message', msg);
 }
 
+function bulkSendToRoom(io, roomData, roomId, msgs) {
+    createRoomIfMissing(roomData, roomId);
+    roomData[roomId].messages.push(...msgs);
+    io.to(roomId).emit('bulkMessage', msgs);
+}
+
 function syncGameState(io, roomId, gameState) {
     if (!gameState) return;
     const pub = gameState.public || {};
@@ -73,6 +79,7 @@ function announcePlayerTurn(io, roomData, roomId, gameState) {
 module.exports = {
     createRoomIfMissing,
     sendToRoom,
+    bulkSendToRoom,
     syncGameState,
     clearRoomIfEmpty,
     removeCard,

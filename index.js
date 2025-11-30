@@ -80,7 +80,6 @@ io.on('connection', (socket) => {
         }).filter(Boolean);
 
         if (players.length < 4) return socket.emit('message', 'Need at least 4 players to start');
-        if (roomData[roomId].gameState) return socket.emit('message', 'Game already in progress');
 
         const socketMap = Object.fromEntries(players.map(p => [p.name, p.id]));
         const gameState = game.initialGameState(players);
@@ -107,8 +106,8 @@ io.on('connection', (socket) => {
             return socket.emit('message', result.messages[0]);
         }
         
-        result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
         
+        helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
         helpers.syncGameState(io, roomId, gs);
 
         if (!result.auctionWon && gs.public.bidders.length > 0) {
@@ -123,8 +122,8 @@ io.on('connection', (socket) => {
         if(!helpers.validateRoomAndGameStage(socket, roomId, gs, 'powerSuitSelection')) return
 
         const result = game.selectPowerSuit(gs, socket.name,selectedSuit);
-        result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
-
+        helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
+        
         helpers.syncGameState(io, roomId, gs);
     });
 
@@ -140,7 +139,7 @@ io.on('connection', (socket) => {
             return socket.emit('message', result.messages[0]);
         }
 
-        result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
+        helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
         
         helpers.syncGameState(io, roomId, gs);
         helpers.announcePlayerTurn(io, roomData, roomId, gs);
@@ -148,21 +147,6 @@ io.on('connection', (socket) => {
     });
 
 
-    // ------------------------------------------------------------
-    // cardPlayed
-    // ------------------------------------------------------------
-    // - Validate room + game existence.
-    // - Ensure stage is "playing".
-    // - Apply game.playCard.
-    // - Broadcast returned game messages.
-    // - Emit "cardPlayed" with playerName + card for animations/UI.
-    // - If round (trick) finished: emit "newRound".
-    // - syncGameState after updates.
-    // - If winners exist: emit gameOver to room.
-    // - Otherwise:
-    //       * announce next player's turn via chat
-    //       * emit private playerTurn to the next player
-    //         (include suit requirement if needed)
     socket.on('cardPlayed', (card)=>{
         const roomId = socket.roomId
         const gs = helpers.getGameState(roomData, roomId);
@@ -172,15 +156,12 @@ io.on('connection', (socket) => {
         if(result.status === 'error'){
             return socket.emit('message', result.messages[0]);
         }
-        result.messages.forEach(m => helpers.sendToRoom(io, roomData, roomId, m));
-
+        helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
         helpers.syncGameState(io, roomId, gs);
         
         io.to(roomId).emit('cardPlayed', {playerName: socket.name, card})
-        if(gs.public.gameWinners){
-            io.to(roomId).emit('gameOver')
-        }else{   
-            helpers.announcePlayerTurn(io, roomData, roomId, gs);
+        if(gs.public.stage === 'playing'){
+            helpers.announcePlayerTurn(io, roomData, roomId, gs)
         }
     });
 
