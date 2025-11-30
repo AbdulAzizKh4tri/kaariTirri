@@ -47,10 +47,36 @@ function removeCard(hand, suit, number) {
     return false;              // card not found
 }
 
+function validateRoomAndGameStage(socket, roomId, gs, expectedStage) {
+    if(!roomId) return false;
+    if (!gs){
+        socket.emit('message', 'No ongoing game in this room.');
+        return false;
+    }
+    if(gs.public.stage !== expectedStage) {
+        socket.emit('message','Wrong game stage')
+        return false;
+    }
+    return true
+}
+
+function getGameState(roomData, roomId) {
+    if (!roomId) return null;
+    return roomData[roomId]?.gameState;
+}
+
+function announcePlayerTurn(io, roomData, roomId, gameState) {
+    const currentPlayer = gameState.public.players[gameState.public.turnIndex];
+    sendToRoom(io, roomData, roomId, `It's ${currentPlayer}'s turn!`);
+}
+
 module.exports = {
     createRoomIfMissing,
     sendToRoom,
     syncGameState,
     clearRoomIfEmpty,
-    removeCard
+    removeCard,
+    validateRoomAndGameStage,
+    getGameState,
+    announcePlayerTurn
 };
