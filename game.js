@@ -89,6 +89,7 @@ function initialGameState(players) {
 
     return {
         public: {
+            defaultDeck: deck,
             players: players.map(p => p.name), // array of names
             bidders: players.map(p => p.name),
             playerCount: players.length,
@@ -148,7 +149,7 @@ function placeBid(gameState, playerName, bidAmount) {
     if (currentBidder !== playerName) {
         return {
             status: 'wrongTurn',
-            messages: [`It's ${currentBidder}'s turn to bid`],
+            messages: [`Not your turn. It's ${currentBidder}'s turn to bid`],
             auctionWon: false
         };
     }
@@ -162,7 +163,6 @@ function placeBid(gameState, playerName, bidAmount) {
         pub.highestBidder = playerName;
 
         messages.push(`${playerName} placed a bid of ${amount}`);
-        messages.push(`Highest bidder: ${pub.highestBidder}`);
 
         // max bid → instant win
         if (amount === 250) {
@@ -235,10 +235,7 @@ function selectPowerSuit(gameState, playerName, selectedSuit){
     
     return {
         messages,
-        data:{
-            partnerCount,
-            defaultDeck,
-        }
+        data:{partnerCount}
     }
 }
 
@@ -279,7 +276,7 @@ function selectPartners(gameState, playerName, partners){
 function playCard(gameState, playerName, card){
     const pub = gameState.public
     messages = []
-    if(pub.players[pub.turnIndex] != playerName) return {messages}
+    if(pub.players[pub.turnIndex] != playerName) return {status: "error", messages: ["Not your turn to play"]};
     
     if(pub.round.length > 0){
         const leadSuit = pub.round[0].card.suit
@@ -287,7 +284,7 @@ function playCard(gameState, playerName, card){
             const hasLeadSuit = gameState.playerGameStates[playerName].hand.some(c => c.suit == leadSuit)
             if(hasLeadSuit){
                 messages.push(`${playerName} must follow suit ${leadSuit}`)
-                return {messages}
+                return {status: "error", messages: [`${playerName} must follow suit ${leadSuit}`]};
             }
         }
     }
@@ -328,15 +325,17 @@ function playCard(gameState, playerName, card){
             if(gameState.alphaScore >= pub.highestBid){
                 messages.push(`${[...gameState.alpha]} win!`)
                 pub.gameWinners = [...gameState.alpha]
+                pub.stage = 'gameOver'
             }
             if(gameState.betaScore > 250 - pub.highestBid){
                 messages.push(`${[...gameState.beta]} win!`)
                 pub.gameWinners = [...gameState.beta]
+                pub.stage = 'gameOver'
             }
         }
 
     }else{
-        messages.push(`${playerName} tried to play ${card.number} of ${card.suit} but failed`)
+        return {status: "error", messages: [`Card not found in hand`]};
     }
     
     return {

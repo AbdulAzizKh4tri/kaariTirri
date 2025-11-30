@@ -64,7 +64,7 @@
                         <button id="partnerSelectBtn" class="btn btn-primary">Select Partners</button>
                     </div>
 
-                    <div id="roundOutput" class="border bg-white p-3 rounded" style="min-height: 200px;">
+                    <div id="roundOutput" class="border bg-white p-3 rounded d-flex" style="min-height: 150px;">
                         Waiting for game updates...
                     </div>
                     <h4>Round Score: <span id="roundScore">0</span>, Round Leader: <span id="roundLeader">...</span> </h4>
@@ -103,6 +103,8 @@
 
 <script>
     const socket = io({ autoConnect: false });
+    const ding = new Audio('sounds/discord_ding.mp3');
+    ding.volume = 0.2;
 
     const userNameInput = document.getElementById('userName');
     const roomInput = document.getElementById('roomId');
@@ -141,6 +143,41 @@
     var gameState = {}
     var playerName = ""
 
+    function updateStagePanels(publicState, playerName){
+        startGameBtn.hidden = true;
+
+        if(publicState.stage == "auction"){
+            auctionPanel.hidden = false;
+            powerSuitPanel.hidden = true;
+            partnerSelectionPanel.hidden = true;
+        }else if(publicState.stage == "powerSuitSelection" && publicState.highestBidder == playerName){
+            auctionPanel.hidden = true;
+            powerSuitPanel.hidden = false;
+            partnerSelectionPanel.hidden = true;
+        }else if(publicState.stage == "partnerSelection" && publicState.highestBidder == playerName){
+            auctionPanel.hidden = true;
+            powerSuitPanel.hidden = true;
+            partnerSelectionPanel.hidden = false;
+
+            publicState.defaultDeck.forEach(card => {
+                const option = document.createElement('option')
+                option.value =  JSON.stringify(card);
+                option.innerHTML = `${card.number} of ${card.suit}`
+                partnerSelect.appendChild(option)
+            });
+        }else if(publicState.stage == "gameOver"){
+            auctionPanel.hidden = true;
+            powerSuitPanel.hidden = true;
+            partnerSelectionPanel.hidden = true;
+            startGameBtn.hidden = false;
+        }else{
+            auctionPanel.hidden = true;
+            powerSuitPanel.hidden = true;
+            partnerSelectionPanel.hidden = true;
+        }
+        
+    }
+
     joinBtn.addEventListener('click', () => {
         const roomId = roomInput.value.trim();
         const name = userNameInput.value.trim();
@@ -175,7 +212,6 @@
     });
     passBtn.addEventListener('click', () => {
         socket.emit('bidPlaced', 0);
-        bidBtn.disabled = true
     })
 
     powerSuitBtn.addEventListener('click', ()=>{
@@ -192,15 +228,12 @@
 
     })
 
-    socket.on('gameStarted', () => {
-        startGameBtn.hidden = true;
-    })
-
     socket.on('gameStateUpdate', (data) => {
-        localStorage.gameState = JSON.stringify(data)
-        gameState = data
+        gameState = data;
         const hand = gameState.playerGameState.hand;
-        playerHandDiv.innerHTML = ''
+        playerHandDiv.innerHTML = '';
+
+        updateStagePanels(gameState.public, playerName);
 
         const grouped = {
             Spades: [],
@@ -209,7 +242,7 @@
             Clubs: []
         };
 
-        hand.forEach(card => {
+        hand?.forEach(card => {
             grouped[card.suit].push(card);
         });
 
@@ -226,14 +259,12 @@
                 const card_img = document.createElement('img');
                 card_img.classList.add(`${suit.toLowerCase()}`, 'hand_card');
                 card_img.src = `/cards/${card.suit.toLowerCase()}/${card.number.toLowerCase()}.png`;
-                card_img.style.pointerEvents = 'none';
                 card_img.style.width = '80px';
 
                 card_img.alt = `${card.number} of ${card.suit}`;
 
                 card_img.addEventListener('click',()=>{
                     socket.emit('cardPlayed', card);
-                    document.querySelectorAll('.hand_card').forEach(c => {c.style.pointerEvents = 'none';});
                 })
                 div.appendChild(card_img)
             })
@@ -243,72 +274,49 @@
         roundScore.innerHTML = gameState.public.roundScore;
         roundLeader.innerHTML = gameState.public.roundLeader;
 
-    
+        roundOutput.innerHTML = '';        
+        gameState.public.round.forEach(roundEntry => {
+            const card = roundEntry.card;
+            const playerName = roundEntry.playerName; 
+
+            // Wrapper for card + name
+            const cardWrapper = document.createElement('div');
+            cardWrapper.classList.add('card-played'); 
+
+            const card_img = document.createElement('img');
+            card_img.src = `/cards/${card.suit.toLowerCase()}/${card.number.toLowerCase()}.png`;
+            card_img.style.width = '80px';
+            card_img.alt = `${card.number} of ${card.suit}`;
+
+            const label = document.createElement('div');
+            label.classList.add('card-player-name'); 
+            label.textContent = playerName;
+
+            cardWrapper.appendChild(card_img);
+            cardWrapper.appendChild(label);
+
+            roundOutput.appendChild(cardWrapper);
+        });
+
+        if(gameState.public.stage == "gameOver"){
+            roundOutput.innerHTML += `<h2 class="text-center">Game Over! Winners: ${gameState.public.gameWinners}</h2>`
+        }
+  
+  
     });
 
     socket.on('message', (msg) => {
         messagesDiv.innerHTML += `<p class="msg">${msg}</p>`;
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        ding.play();
     });
 
-    socket.on('auctionWon', ()=>{
-        auctionPanel.hidden = true;
-    })
-
-    socket.on('auctionWinner', ()=>{
-        powerSuitPanel.hidden = false;
-    })
-
-    socket.on('powerSuitSelected', (data)=>{
-        const deck = data.defaultDeck
-        powerSuitPanel.hidden = true;
-        
-        deck.forEach(card => {
-            const option = document.createElement('option')
-            option.value =  JSON.stringify(card);
-            option.innerHTML = `${card.number} of ${card.suit}`
-            partnerSelect.appendChild(option)
+    socket.on('bulkMessage', (msgs)=>{
+        msgs.forEach(msg => {
+            messagesDiv.innerHTML += `<p class="msg">${msg}</p>`;
         });
-        
-        partnerSelectionPanel.hidden = false;
-
-    })
-
-    socket.on('newRound', ()=>{
-        roundOutput.innerHTML = ""
-        partnerSelectionPanel.hidden = true;
-    })
-
-    socket.on('playerTurn', (leadSuit)=>{
-        const hasLeadSuit = JSON.parse(localStorage.gameState).playerGameState.hand.some(c => c.suit == leadSuit)
-        if(leadSuit && hasLeadSuit){
-            const card_img = document.getElementsByClassName(leadSuit.toLowerCase());
-            for (let img of card_img) {
-                img.style.pointerEvents = 'auto';
-            }
-        }else{
-            const card_img = document.getElementsByClassName('hand_card');
-            for (let img of card_img) {
-                img.style.pointerEvents = 'auto';
-            }
-        }
-
-    })
-
-    socket.on('cardPlayed', (data)=>{
-        const card_img = document.createElement('img');
-        card_img.src = `/cards/${data.card.suit.toLowerCase()}/${data.card.number.toLowerCase()}.png`;
-        card_img.style.width = '80px';
-        card_img.alt = `${data.card.number} of ${data.card.suit}`;
-        card_img.style.pointerEvents = 'none';
-
-        roundOutput.appendChild(card_img);
-    })
-
-    socket.on('gameOver', ()=>{
-        socket.disconnect()
-        roundOutput.innerHTML += `<h2 class="text-center">Game Over! Winners: ${gameState.public.gameWinners}</h2>`
-        console.log("BYE BYE")
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        ding.play();
     })
 
     socket.on('connect', () => {

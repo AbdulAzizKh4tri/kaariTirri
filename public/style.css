@@ -31,3 +31,16 @@ body {
     color: #555;
     margin: 5px 0;
 }
+
+.card-played {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+}
+
+.card-player-name {
+    margin-top: 5px;
+    font-size: 14px;
+    font-weight: bold;
+}

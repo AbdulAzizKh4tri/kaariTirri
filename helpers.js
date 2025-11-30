@@ -9,6 +9,12 @@ function sendToRoom(io, roomData, roomId, msg) {
     io.to(roomId).emit('message', msg);
 }
 
+function bulkSendToRoom(io, roomData, roomId, msgs) {
+    createRoomIfMissing(roomData, roomId);
+    roomData[roomId].messages.push(...msgs);
+    io.to(roomId).emit('bulkMessage', msgs);
+}
+
 function syncGameState(io, roomId, gameState) {
     if (!gameState) return;
     const pub = gameState.public || {};
@@ -47,10 +53,37 @@ function removeCard(hand, suit, number) {
     return false;              // card not found
 }
 
+function validateRoomAndGameStage(socket, roomId, gs, expectedStage) {
+    if(!roomId) return false;
+    if (!gs){
+        socket.emit('message', 'No ongoing game in this room.');
+        return false;
+    }
+    if(gs.public.stage !== expectedStage) {
+        socket.emit('message','Wrong game stage')
+        return false;
+    }
+    return true
+}
+
+function getGameState(roomData, roomId) {
+    if (!roomId) return null;
+    return roomData[roomId]?.gameState;
+}
+
+function announcePlayerTurn(io, roomData, roomId, gameState) {
+    const currentPlayer = gameState.public.players[gameState.public.turnIndex];
+    sendToRoom(io, roomData, roomId, `It's ${currentPlayer}'s turn!`);
+}
+
 module.exports = {
     createRoomIfMissing,
     sendToRoom,
+    bulkSendToRoom,
     syncGameState,
     clearRoomIfEmpty,
-    removeCard
+    removeCard,
+    validateRoomAndGameStage,
+    getGameState,
+    announcePlayerTurn
 };
