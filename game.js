@@ -277,8 +277,14 @@ function playCard(gameState, playerName, card){
     const pub = gameState.public
     messages = []
     if(pub.players[pub.turnIndex] != playerName) return {status: "error", messages: ["Not your turn to play"]};
+
+    if(pub.round.length == pub.playerCount){
+        pub.round = []
+        pub.roundLeader = null
+        pub.roundScore = 0
+    }
     
-    if(pub.round.length > 0){
+    if(pub.round.length > 0 && pub.round.length < pub.playerCount){
         const leadSuit = pub.round[0].card.suit
         if(card.suit != leadSuit){
             const hasLeadSuit = gameState.playerGameStates[playerName].hand.some(c => c.suit == leadSuit)
@@ -316,9 +322,6 @@ function playCard(gameState, playerName, card){
                 gameState.betaScore += roundScore;
             }
 
-            pub.roundLeader = null
-            pub.roundScore = 0;
-            pub.round = []
             pub.turnIndex = pub.players.indexOf(roundLeader)
             messages.push(`${roundLeader} won ${roundScore} points`)
 
