@@ -41,6 +41,9 @@ io.on('connection', (socket) => {
 
         
         socket.emit('bulkMessage',roomData[roomId].messages);
+
+		io.to(roomId).emit('playerList', Object.keys(roomData[roomId].socketMap));
+
         helpers.sendToRoom(io, roomData, roomId, `User ${socket.name} joined the room`);
         console.log(`User ${socket.name} joined ${roomId}`);
         
@@ -71,7 +74,9 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         const roomId = socket.roomId;
         if (!roomId) return;
+        delete roomData[roomId].socketMap[socket.name];
         helpers.sendToRoom(io, roomData, roomId, `User ${socket.name} disconnected`);
+		io.to(roomId).emit('playerList', Object.keys(roomData[roomId].socketMap));
         helpers.clearRoomIfEmpty(io, roomData, roomId);
     });
 
