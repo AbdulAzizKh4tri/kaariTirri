@@ -245,9 +245,9 @@ function selectPartners(gameState, playerName, partners){
 
     const partnerCount = Math.ceil(gameState.public.playerCount / 2) - 1;
     if(partners.length > partnerCount) return {status: 'error', messages: ['too many partners']};
-    
+
     gameState.public.stage = 'playing';
-    
+
     gameState.alpha.add(playerName);
 
     partners.forEach(card =>{
@@ -274,6 +274,7 @@ function selectPartners(gameState, playerName, partners){
 }
 
 function playCard(gameState, playerName, card){
+
     const pub = gameState.public
     messages = []
     if(pub.players[pub.turnIndex] != playerName) return {status: "error", messages: ["Not your turn to play"]};
@@ -295,9 +296,9 @@ function playCard(gameState, playerName, card){
         }
     }
     
-    const success = helpers.removeCard(gameState.playerGameStates[playerName].hand, card.suit, card.number)
+    card = helpers.removeCardFromHand(gameState.playerGameStates[playerName].hand, card.suit, card.number)
     
-    if(success){
+    if(card){
 
         messages.push(`${playerName} played ${card.number} of ${card.suit}`)
 
@@ -314,7 +315,7 @@ function playCard(gameState, playerName, card){
         pub.roundLeader = roundLeader
         
         if(round.length == pub.playerCount){
-            pub.playerScores[roundLeader] += roundScore;
+			pub.playerScores[roundLeader] += roundScore;
 
             if(gameState.alpha.has(roundLeader)){
                 gameState.alphaScore += roundScore;

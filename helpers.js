@@ -38,16 +38,17 @@ function clearRoomIfEmpty(io, roomData, roomId) {
     }
 }
 
-function removeCard(hand, suit, number) {
+function removeCardFromHand(hand, suit, number) {
     const idx = hand.findIndex(
         card => card.suit === suit && card.number === number
     );
 
     if (idx !== -1) {
+		card = hand[idx]
         hand.splice(idx, 1);   // removes the card
-        return true;           // removed successfully
+        return card;           // returns the removed card 
     }
-    return false;              // card not found
+    return null;              // card not found
 }
 
 function validateRoomAndGameStage(socket, roomId, gs, expectedStage) {
@@ -79,7 +80,7 @@ module.exports = {
     bulkSendToRoom,
     syncGameState,
     clearRoomIfEmpty,
-    removeCard,
+    removeCardFromHand,
     validateRoomAndGameStage,
     getGameState,
     announcePlayerTurn
