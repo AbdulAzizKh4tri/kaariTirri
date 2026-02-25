@@ -21,8 +21,6 @@ const port = 3000;
 // - socketMap may be added dynamically to map playerName -> socketId.
 const roomData = {};
 
-app.use(express.static(path.resolve('./public')));
-
 io.on('connection', (socket) => {
 
     socket.on('joinRoom', (data) => {
@@ -177,14 +175,6 @@ io.on('connection', (socket) => {
         }
     });
 
-});
-
-
-// ------------------------------------------------------------
-// Serve main HTML file
-// ------------------------------------------------------------
-app.get('/', (req, res) => {
-    res.sendFile(path.resolve('./public/index.html'));
 });
 
 
