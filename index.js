@@ -1,4 +1,5 @@
-// index.js
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -14,7 +15,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   }
 });
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // In-memory room storage: { roomId: { messages: [], gameState: {...} } }
 // - Stores chat logs and game state for each room.
