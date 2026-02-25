@@ -313,7 +313,7 @@ function playCard(gameState, playerName, card){
         const roundLeader = round.reduce((max, c) => (c.power > max.power ? c : max)).playerName
         pub.roundScore = roundScore
         pub.roundLeader = roundLeader
-        
+
         if(round.length == pub.playerCount){
 			pub.playerScores[roundLeader] += roundScore;
 

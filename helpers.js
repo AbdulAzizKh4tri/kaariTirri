@@ -3,6 +3,12 @@ function createRoomIfMissing(roomData, roomId) {
     if (!roomData[roomId]) roomData[roomId] = { messages: [] };
 }
 
+function sendUserMessage(io, roomData, roomId, msg) {
+    createRoomIfMissing(roomData, roomId);
+    roomData[roomId].chat.push(msg);
+    io.to(roomId).emit('userMessage', msg);
+}
+
 function sendToRoom(io, roomData, roomId, msg) {
     createRoomIfMissing(roomData, roomId);
     roomData[roomId].messages.push(msg);
@@ -76,6 +82,7 @@ function announcePlayerTurn(io, roomData, roomId, gameState) {
 
 module.exports = {
     createRoomIfMissing,
+	sendUserMessage,
     sendToRoom,
     bulkSendToRoom,
     syncGameState,

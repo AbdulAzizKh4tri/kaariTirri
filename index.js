@@ -10,9 +10,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true
   }
 });
 const port = 3000;
@@ -34,15 +33,16 @@ io.on('connection', (socket) => {
         socket.roomId = roomId;
         socket.name = name;
 
-        if (!roomData[roomId]) roomData[roomId] = { messages: [] };
+        if (!roomData[roomId]) roomData[roomId] = { messages: [], chat: [] };
 
         roomData[roomId].socketMap = roomData[roomId].socketMap || {};
         roomData[roomId].socketMap[name] = socket.id;
 
 
         socket.emit('bulkMessage',roomData[roomId].messages);
+        socket.emit('chatHistory',roomData[roomId].chat);
 
-		io.to(roomId).emit('playerList', Object.keys(roomData[roomId].socketMap));
+		io.to(roomId).emit('memberList', Object.keys(roomData[roomId].socketMap));
 
         helpers.sendToRoom(io, roomData, roomId, `User ${socket.name} joined the room`);
         console.log(`User ${socket.name} joined ${roomId}`);
@@ -66,11 +66,10 @@ io.on('connection', (socket) => {
 
     });
 
-
-    socket.on('message', (msg) => {
+    socket.on('userMessage', (msg) => {
         const roomId = socket.roomId;
-        if (!roomId) return;
-        helpers.sendToRoom(io, roomData, roomId, `${socket.name}: ${msg}`);
+        if (!roomId || !msg.trim()) return;
+        helpers.sendUserMessage(io, roomData, roomId, {"name":socket.name, "message": msg.trim()});
     });
 
 
