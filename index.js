@@ -33,23 +33,26 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         socket.roomId = roomId;
         socket.name = name;
-        
+
         if (!roomData[roomId]) roomData[roomId] = { messages: [] };
-        
+
         roomData[roomId].socketMap = roomData[roomId].socketMap || {};
         roomData[roomId].socketMap[name] = socket.id;
 
-        
+
         socket.emit('bulkMessage',roomData[roomId].messages);
 
 		io.to(roomId).emit('playerList', Object.keys(roomData[roomId].socketMap));
 
         helpers.sendToRoom(io, roomData, roomId, `User ${socket.name} joined the room`);
         console.log(`User ${socket.name} joined ${roomId}`);
-        
+
         const gs = helpers.getGameState(roomData, roomId);
-        
+
         if (gs) {
+
+			if (gs.socketMap) gs.socketMap[name] = socket.id;
+
             if (gs.playerGameStates && gs.playerGameStates[socket.name]) {
                 socket.emit('gameStateUpdate', { public: gs.public, playerGameState: gs.playerGameStates[socket.name] });
                 if(socket.name == gs.public.players[gs.public.turnIndex]){
@@ -110,14 +113,13 @@ io.on('connection', (socket) => {
         const roomId = socket.roomId;
         const gs = helpers.getGameState(roomData, roomId);
         if(!helpers.validateRoomAndGameStage(socket, roomId, gs, 'auction')) return
-        
+
         const result = game.placeBid(gs, socket.name, bidAmount);
 
         if(result.status === 'wrongTurn'){
             return socket.emit('message', result.messages[0]);
         }
-        
-        
+
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
         helpers.syncGameState(io, roomId, gs);
 
@@ -134,7 +136,7 @@ io.on('connection', (socket) => {
 
         const result = game.selectPowerSuit(gs, socket.name,selectedSuit);
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
-        
+
         helpers.syncGameState(io, roomId, gs);
     });
 
@@ -145,13 +147,13 @@ io.on('connection', (socket) => {
         if(!helpers.validateRoomAndGameStage(socket, roomId, gs, 'partnerSelection')) return
 
         const result = game.selectPartners(gs, socket.name, cards);
-        
+
         if(result.status === 'error'){
             return socket.emit('message', result.messages[0]);
         }
 
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
-        
+
         helpers.syncGameState(io, roomId, gs);
         helpers.announcePlayerTurn(io, roomData, roomId, gs);
 
@@ -169,7 +171,7 @@ io.on('connection', (socket) => {
         }
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
         helpers.syncGameState(io, roomId, gs);
-        
+
         io.to(roomId).emit('cardPlayed', {playerName: socket.name, card})
         if(gs.public.stage === 'playing'){
             helpers.announcePlayerTurn(io, roomData, roomId, gs)

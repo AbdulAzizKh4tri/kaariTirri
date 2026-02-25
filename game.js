@@ -101,7 +101,7 @@ function initialGameState(players) {
             turnIndex: null,
             stage: 'auction',
             currentBidIndex: Math.floor(Math.random() * players.length),
-            highestBid: 0,
+            highestBid: 120,
             highestBidder: null,
             gameWinners: null,
         },
@@ -155,7 +155,7 @@ function placeBid(gameState, playerName, bidAmount) {
     }
 
     const amount = Number(bidAmount) || 0;
-    pub.highestBid = pub.highestBid || 0;
+    pub.highestBid = pub.highestBid || 120;
 
     // ---- RAISE ----
     if (amount > pub.highestBid) {

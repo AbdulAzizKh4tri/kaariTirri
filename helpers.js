@@ -21,9 +21,6 @@ function syncGameState(io, roomId, gameState) {
     const pg = gameState.playerGameStates || {};
     const map = gameState.socketMap || {};
 
-    // broadcast public state
-    io.to(roomId).emit('publicState', pub);
-
     // private state to each player
     for (const [playerName, playerState] of Object.entries(pg)) {
         const socketId = map[playerName];
