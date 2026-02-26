@@ -15,6 +15,7 @@ const io = new Server(server, {
 	methods: ["GET", "POST"],
   }
 });
+console.log('CLIENT_URL:', process.env.CLIENT_URL);
 const port = process.env.PORT || 3000;
 
 // In-memory room storage: { roomId: { messages: [], gameState: {...} } }
