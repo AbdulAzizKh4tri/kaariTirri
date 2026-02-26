@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
         if (!roomId) return;
         delete roomData[roomId].socketMap[socket.name];
         helpers.sendToRoom(io, roomData, roomId, `User ${socket.name} disconnected`);
-		io.to(roomId).emit('playerList', Object.keys(roomData[roomId].socketMap));
+		io.to(roomId).emit('memberList', Object.keys(roomData[roomId].socketMap));
         helpers.clearRoomIfEmpty(io, roomData, roomId);
     });
 
