@@ -21,7 +21,7 @@ function bulkSendToRoom(io, roomData, roomId, msgs) {
     io.to(roomId).emit('bulkMessage', msgs);
 }
 
-function syncGameState(io, roomId, gameState) {
+function syncGameState(io, roomId, gameState, gameResults) {
     if (!gameState) return;
     const pub = gameState.public || {};
     const pg = gameState.playerGameStates || {};
@@ -32,7 +32,7 @@ function syncGameState(io, roomId, gameState) {
         const socketId = map[playerName];
         if (!socketId) continue;
         const sock = io.sockets.sockets.get(socketId);
-        if (sock) sock.emit('gameStateUpdate', { public: pub, playerGameState: playerState, gameResults: gameState.gameResults });
+        if (sock) sock.emit('gameStateUpdate', { public: pub, playerGameState: playerState, gameResults: gameResults });
     }
 }
 

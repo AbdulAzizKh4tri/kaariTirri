@@ -17,7 +17,6 @@ const io = new Server(server, {
   }
 });
 
-console.log('CLIENT_URL:', process.env.CLIENT_URL);
 const port = process.env.PORT || 3000;
 
 // In-memory cache of rooms for the current server session.
@@ -94,7 +93,8 @@ io.on('connection', (socket) => {
             if (gs.playerGameStates && gs.playerGameStates[socket.name]) {
                 socket.emit('gameStateUpdate', {
                     public: gs.public,
-                    playerGameState: gs.playerGameStates[socket.name]
+                    playerGameState: gs.playerGameStates[socket.name],
+					gameResults: roomData[roomId].gameResults
                 });
                 if (socket.name === gs.public.players[gs.public.turnIndex]) {
                     socket.emit('playerTurn');
@@ -150,6 +150,7 @@ io.on('connection', (socket) => {
         }).filter(Boolean);
 
         if (players.length < 4) return socket.emit('message', 'Need at least 4 players to start');
+        if (players.length > 10) return socket.emit('message', 'Too many players in this room');
 
         const socketMap = Object.fromEntries(players.map(p => [p.name, p.id]));
         const gameState = game.initialGameState(players);
@@ -157,7 +158,7 @@ io.on('connection', (socket) => {
         roomData[roomId].gameState = gameState;
 
         helpers.sendToRoom(io, roomData, roomId, `Game started by ${socket.name}`);
-        helpers.syncGameState(io, roomId, gameState);
+        helpers.syncGameState(io, roomId, gameState, roomData[roomId].gameResults);
 
         const bidder = game.getCurrentBidder(gameState);
         helpers.sendToRoom(io, roomData, roomId, `${bidder}'s turn to bid`);
@@ -179,7 +180,7 @@ io.on('connection', (socket) => {
         }
 
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
-        helpers.syncGameState(io, roomId, gs);
+        helpers.syncGameState(io, roomId, gs, roomData[roomId].gameResults);
 
         if (!result.auctionWon && gs.public.bidders.length > 0) {
             const next = game.getCurrentBidder(gs);
@@ -198,7 +199,7 @@ io.on('connection', (socket) => {
 
         const result = game.selectPowerSuit(gs, socket.name, selectedSuit);
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
-        helpers.syncGameState(io, roomId, gs);
+        helpers.syncGameState(io, roomId, gs, roomData[roomId].gameResults);
 
         await persist(roomId);
     });
@@ -217,7 +218,7 @@ io.on('connection', (socket) => {
         }
 
         helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
-        helpers.syncGameState(io, roomId, gs);
+        helpers.syncGameState(io, roomId, gs, roomData[roomId].gameResults);
         helpers.announcePlayerTurn(io, roomData, roomId, gs);
 
         await persist(roomId);
@@ -235,11 +236,6 @@ io.on('connection', (socket) => {
             return socket.emit('message', result.messages[0]);
         }
 
-        helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
-        helpers.syncGameState(io, roomId, gs);
-
-        io.to(roomId).emit('cardPlayed', { playerName: socket.name, card });
-
         if (gs.public.stage === 'gameOver') {
             roomData[roomId].gameResults = roomData[roomId].gameResults || [];
             roomData[roomId].gameResults.push({
@@ -249,6 +245,11 @@ io.on('connection', (socket) => {
 				gameLosers: gs.public.players.filter(p => !gs.public.gameWinners.includes(p))
             });
         }
+
+        helpers.bulkSendToRoom(io, roomData, roomId, result.messages);
+        helpers.syncGameState(io, roomId, gs, roomData[roomId].gameResults);
+
+        io.to(roomId).emit('cardPlayed', { playerName: socket.name, card });
 
         if (gs.public.stage === 'playing') {
             helpers.announcePlayerTurn(io, roomData, roomId, gs);
