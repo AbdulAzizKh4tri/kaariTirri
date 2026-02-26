@@ -36,12 +36,23 @@ function syncGameState(io, roomId, gameState) {
     }
 }
 
+/**
+ * Clear room from in-memory roomData if the socket.io room is empty.
+ * Returns true if the room was cleared, false if it still has members.
+ *
+ * @param {*} io
+ * @param {*} roomData    in-memory room map
+ * @param {string} roomId
+ * @returns {boolean}
+ */
 function clearRoomIfEmpty(io, roomData, roomId) {
     const room = io.sockets.adapter.rooms.get(roomId);
     if (!room || room.size === 0) {
-        console.log(`Room ${roomId} is empty → clearing room data`);
+        console.log(`Room ${roomId} is empty → clearing in-memory room data`);
         delete roomData[roomId];
+        return true;
     }
+    return false;
 }
 
 function removeCardFromHand(hand, suit, number) {
@@ -50,24 +61,24 @@ function removeCardFromHand(hand, suit, number) {
     );
 
     if (idx !== -1) {
-		card = hand[idx]
+        card = hand[idx];
         hand.splice(idx, 1);   // removes the card
-        return card;           // returns the removed card 
+        return card;           // returns the removed card
     }
-    return null;              // card not found
+    return null;               // card not found
 }
 
 function validateRoomAndGameStage(socket, roomId, gs, expectedStage) {
-    if(!roomId) return false;
-    if (!gs){
+    if (!roomId) return false;
+    if (!gs) {
         socket.emit('message', 'No ongoing game in this room.');
         return false;
     }
-    if(gs.public.stage !== expectedStage) {
-        socket.emit('message','Wrong game stage')
+    if (gs.public.stage !== expectedStage) {
+        socket.emit('message', 'Wrong game stage');
         return false;
     }
-    return true
+    return true;
 }
 
 function getGameState(roomData, roomId) {
@@ -82,7 +93,7 @@ function announcePlayerTurn(io, roomData, roomId, gameState) {
 
 module.exports = {
     createRoomIfMissing,
-	sendUserMessage,
+    sendUserMessage,
     sendToRoom,
     bulkSendToRoom,
     syncGameState,
