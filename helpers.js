@@ -32,7 +32,7 @@ function syncGameState(io, roomId, gameState) {
         const socketId = map[playerName];
         if (!socketId) continue;
         const sock = io.sockets.sockets.get(socketId);
-        if (sock) sock.emit('gameStateUpdate', { public: pub, playerGameState: playerState });
+        if (sock) sock.emit('gameStateUpdate', { public: pub, playerGameState: playerState, gameResults: gameState.gameResults });
     }
 }
 

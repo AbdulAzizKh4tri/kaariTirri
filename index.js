@@ -48,7 +48,7 @@ async function ensureRoom(roomId) {
             roomData[roomId] = stored;
             console.log(`Room ${roomId} restored from Redis`);
         } else {
-            roomData[roomId] = { messages: [], chat: [] };
+            roomData[roomId] = { messages: [], chat: [], gameResults: [] };
         }
     }
 }
@@ -61,12 +61,18 @@ io.on('connection', (socket) => {
         const { roomId, name } = data || {};
         if (!roomId || !name) return socket.emit('message', 'Missing roomId or name');
 
+        // Restore from Redis if this room isn't in memory yet
+        await ensureRoom(roomId);
+
+        // Reject if the name is already taken by a currently connected socket
+        const existingSocketId = roomData[roomId].socketMap?.[name];
+        if (existingSocketId && io.sockets.sockets.get(existingSocketId)) {
+            return socket.emit('message', `Name "${name}" is already taken in this room.`);
+        }
+
         socket.join(roomId);
         socket.roomId = roomId;
         socket.name = name;
-
-        // Restore from Redis if this room isn't in memory yet
-        await ensureRoom(roomId);
 
         roomData[roomId].socketMap = roomData[roomId].socketMap || {};
         roomData[roomId].socketMap[name] = socket.id;
@@ -233,6 +239,16 @@ io.on('connection', (socket) => {
         helpers.syncGameState(io, roomId, gs);
 
         io.to(roomId).emit('cardPlayed', { playerName: socket.name, card });
+
+        if (gs.public.stage === 'gameOver') {
+            roomData[roomId].gameResults = roomData[roomId].gameResults || [];
+            roomData[roomId].gameResults.push({
+                highestBid: gs.public.highestBid,
+                highestBidder: gs.public.highestBidder,
+                gameWinners: gs.public.gameWinners,
+				gameLosers: gs.public.players.filter(p => !gs.public.gameWinners.includes(p))
+            });
+        }
 
         if (gs.public.stage === 'playing') {
             helpers.announcePlayerTurn(io, roomData, roomId, gs);
