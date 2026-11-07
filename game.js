@@ -54,8 +54,8 @@ const RANKS = [
 
 const defaultDeck = [];
 
-for (const suit of SUITS) {
-    for (const rank of RANKS) {
+for (const rank of RANKS) {
+    for (const suit of SUITS) {
         const power = powerMap[rank];
         const value = computeValue(suit, rank);
         defaultDeck.push(new Card(suit, rank, power, value));
@@ -85,6 +85,14 @@ function initialGameState(players) {
     shuffled.forEach((card, i) => {
         const player = players[i % count].name;
         playerGameStates[player].hand.push(card);
+    });
+
+    Object.values(playerGameStates).forEach((playerState) => {
+        playerState.hand.sort((a, b) => {
+            const suitDiff = SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+            if (suitDiff !== 0) return suitDiff;
+            return b.power - a.power;
+        });
     });
 
     return {
@@ -355,4 +363,3 @@ module.exports = {
     selectPartners,
     playCard,
 };
-
