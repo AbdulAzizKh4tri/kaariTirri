@@ -14,7 +14,7 @@ const HEARTS = 'Hearts';
 const DIAMONDS = 'Diamonds';
 const CLUBS = 'Clubs';
 
-const SUITS = [SPADES, HEARTS, DIAMONDS, CLUBS];
+const SUITS = [SPADES, HEARTS, CLUBS, DIAMONDS];
 
 // numeric power mapping
 const powerMap = {
@@ -102,8 +102,10 @@ function initialGameState(players) {
             bidders: players.map(p => p.name),
             playerCount: players.length,
             powerSuit: null,
-            partners: [], // this is partner CARDS (bad naming ik but too late to change)
+            partnerCards: [],
+			revealedPartners: [],
             round: [],
+			lastRound: [],
             roundScore: 0,
             playerScores: Object.fromEntries(players.map(p=>[p.name,0])),
             turnIndex: null,
@@ -247,18 +249,18 @@ function selectPowerSuit(gameState, playerName, selectedSuit){
     }
 }
 
-function selectPartners(gameState, playerName, partners){
-    gameState.public.partners = partners;
+function selectPartners(gameState, playerName, partnerCards){
+    gameState.public.partnerCards = partnerCards;
     messages = []
 
     const partnerCount = Math.ceil(gameState.public.playerCount / 2) - 1;
-    if(partners.length > partnerCount) return {status: 'error', messages: ['too many partners']};
+    if(partnerCards.length > partnerCount) return {status: 'error', messages: ['too many partners']};
 
     gameState.public.stage = 'playing';
 
     gameState.alpha.add(playerName);
 
-    partners.forEach(card =>{
+    partnerCards.forEach(card =>{
         messages.push(`${playerName} selected ${card.number} of ${card.suit} as a partner`)
 
         for (const [player, state] of Object.entries(gameState.playerGameStates)) {
@@ -292,9 +294,11 @@ function playCard(gameState, playerName, card){
         pub.roundLeader = null
         pub.roundScore = 0
     }
-    
+
+	let leadSuit = null
+
     if(pub.round.length > 0 && pub.round.length < pub.playerCount){
-        const leadSuit = pub.round[0].card.suit
+        leadSuit = pub.round[0].card.suit
         if(card.suit != leadSuit){
             const hasLeadSuit = gameState.playerGameStates[playerName].hand.some(c => c.suit == leadSuit)
             if(hasLeadSuit){
@@ -303,26 +307,47 @@ function playCard(gameState, playerName, card){
             }
         }
     }
-    
+
     card = helpers.removeCardFromHand(gameState.playerGameStates[playerName].hand, card.suit, card.number)
-    
+
     if(card){
 
         messages.push(`${playerName} played ${card.number} of ${card.suit}`)
 
         pub.turnIndex = (pub.turnIndex + 1) % pub.playerCount;
         const round = pub.round
+
+		let pow = card.power
+		if (card.suit==pub.powerSuit) { 
+			pow = card.power + 100  
+		}else if (leadSuit && card.suit != leadSuit){
+			pow = 0;
+		}
+
         round.push({
             playerName,
             card,
-            power: (card.suit==pub.powerSuit) ? card.power + 100 : card.power
+            power: pow
         });
+
         const roundScore = round.reduce((sum, c) => sum + c.card.value, 0);
         const roundLeader = round.reduce((max, c) => (c.power > max.power ? c : max)).playerName
+
         pub.roundScore = roundScore
         pub.roundLeader = roundLeader
 
+		const partnerCard = pub.partnerCards.find(c => 
+		  c.suit === card.suit && c.number === card.number
+		);
+
+		if (partnerCard) {
+		  partnerCard.player = playerName;
+		  pub.revealedPartners += playerName;
+		}
+
         if(round.length == pub.playerCount){
+			pub.lastRound = round
+
 			pub.playerScores[roundLeader] += roundScore;
 
             if(gameState.alpha.has(roundLeader)){
